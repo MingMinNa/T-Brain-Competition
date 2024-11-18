@@ -16,7 +16,7 @@ LookBackNum = 12  # LSTM往前看的筆數
 ForecastNum = 48  # 預測筆數
 
 # 載入訓練資料
-DataName = os.getcwd() + "\ExampleTrainData(AVG)\AvgDATA_17.csv"
+DataName = os.getcwd() + r"\TrainData(AVG)\AvgDATA_All.csv"
 SourceData = pd.read_csv(DataName, encoding="utf-8")
 
 # 迴歸分析 選擇要留下來的資料欄位
@@ -55,13 +55,9 @@ X_train = np.reshape(X_train, (X_train.shape[0], X_train.shape[1], 5))
 # %%
 # ============================建置&訓練「LSTM模型」============================
 # 建置LSTM模型
-
 regressor = Sequential()
-
 regressor.add(LSTM(units=128, return_sequences=True, input_shape=(X_train.shape[1], 5)))
-
 regressor.add(LSTM(units=64))
-
 regressor.add(Dropout(0.2))
 
 # output layer
@@ -72,31 +68,25 @@ regressor.compile(optimizer="adam", loss="mean_squared_error")
 regressor.fit(X_train, y_train, epochs=100, batch_size=128)
 
 # 保存模型
-from datetime import datetime
-
-NowDateTime = datetime.now().strftime("%Y-%m-%dT%H_%M_%SZ")
-regressor.save("WheatherLSTM_" + NowDateTime + ".h5")
-print("Model Saved")
+regressor.save("WheatherLSTM.h5")
+print("LSTM Model Saved")
 
 
 # %%
 # ============================建置&訓練「回歸模型」========================
-
 # 開始迴歸分析(對發電量做迴歸)
 RegressionModel = LinearRegression()
 RegressionModel.fit(LSTM_MinMaxModel.transform(Regression_X_train), Regression_y_train)
 
 # 儲存回歸模型
-from datetime import datetime
-
-NowDateTime = datetime.now().strftime("%Y-%m-%dT%H_%M_%SZ")
-joblib.dump(RegressionModel, "WheatherRegression_" + NowDateTime)
+joblib.dump(RegressionModel, "WheatherRegression.joblib")
+print("Regression Model Saved")
 
 # 取得截距
-print("截距: ", RegressionModel.intercept_)
+print("截距：", RegressionModel.intercept_)
 
 # 取得係數
-print("係數 : ", RegressionModel.coef_)
+print("係數：", RegressionModel.coef_)
 
 # 取得R平方
 print("R squared: ", RegressionModel.score(LSTM_MinMaxModel.transform(Regression_X_train), Regression_y_train))
@@ -105,12 +95,11 @@ print("R squared: ", RegressionModel.score(LSTM_MinMaxModel.transform(Regression
 # %%
 # ============================預測數據============================
 # 載入模型
-regressor = load_model("WheatherLSTM_2024-11-18T21_04_22Z.h5")
-Regression = joblib.load("WheatherRegression_2024-11-18T21_04_28Z")
-
+regressor = load_model("WheatherLSTM.h5")
+Regression = joblib.load("WheatherRegression.joblib")
 
 # 載入測試資料
-DataName = os.getcwd() + r"\ExampleTestData\upload.csv"
+DataName = os.getcwd() + r"\SubmissionTemplate\upload.csv"
 SourceData = pd.read_csv(DataName, encoding="utf-8")
 target = ["序號"]
 EXquestion = SourceData[target].values
@@ -127,7 +116,7 @@ while count < len(EXquestion):
     if LocationCode < 10:
         strLocationCode = "0" + LocationCode
 
-    DataName = os.getcwd() + "\ExampleTrainData(IncompleteAVG)\IncompleteAvgDATA_" + strLocationCode + ".csv"
+    DataName = os.getcwd() + "\TrainData(IncompleteAVG)\IncompleteAvgDATA_" + strLocationCode + ".csv"
     SourceData = pd.read_csv(DataName, encoding="utf-8")
     ReferTitle = SourceData[["Serial"]].values
     ReferData = SourceData[
@@ -175,4 +164,6 @@ df = pd.DataFrame(PredictPower, columns=["答案"])
 # 將 DataFrame 寫入 CSV 檔案
 df.to_csv("output.csv", index=False)
 print("Output CSV File Saved")
+
+
 # %%
