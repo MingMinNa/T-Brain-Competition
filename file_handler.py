@@ -138,13 +138,21 @@ def make_IncompleteAVG_TrainData(dest_folder, src_folder):
 
     return
 
+def sort_q_date(q_date_path):
+
+    q_date = pd.read_csv(q_date_path)
+    q_date.sort_values(by = ['location', 'date'], inplace = True)
+    q_date.to_csv(q_date_path, index = False)
+
+    return
+
 def init_argparser():
     parser = argparse.ArgumentParser(description = "此程式用於處理給定資料，並將資料以 10 分鐘為單位記錄數值平均")
 
     parser.add_argument('-M', '--Merge', action="store_true", help = "將原始資料和額外資料做合併")
     parser.add_argument('-A', '--AVG', action="store_true", help = "從 Merge_TrainingData 中，生成 TrainData(AVG)")
     parser.add_argument('-I', '--IncompleteAVG', action="store_true", help="從 Merge_TrainingData 中，生成 TrainData(IncompleteAVG)")
-
+    parser.add_argument('-S', '--Sort', action="store_true", help="執行 q_date.csv 的排序")
     return parser.parse_args()
 
 if __name__ == '__main__':
@@ -168,4 +176,7 @@ if __name__ == '__main__':
         make_IncompleteAVG_TrainData(dest_folder = const.GENERATE_IncompleteAVG_FOLDER, 
                                      src_folder = const.GENERATE_MERGE_FOLDER)
 
+    if args.Sort == True:
+        sys.stdout.write('---------- Sort q_date ----------\n')
+        sort_q_date(q_date_path = os.path.join(const.SUBMISSION_FOLDER, 'q_date.csv'))
     quit()

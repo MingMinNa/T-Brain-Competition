@@ -1,4 +1,5 @@
 import os
+import torch
 
 
 def __get_parent_folder(file_path, level = 1):
@@ -25,3 +26,5 @@ GIVEN_IncompleteAVG_FOLDER = os.path.join(TRAINING_FOLDER, 'Given', 'Average_Dat
 raw_data_columns = 'LocationCode,DateTime,WindSpeed(m/s),Pressure(hpa),Temperature(°C),Humidity(%),Sunlight(Lux),Power(mW)'.split(',')
 avg_data_columns = 'Serial,WindSpeed(m/s),Pressure(hpa),Temperature(°C),Humidity(%),Sunlight(Lux),Power(mW)'.split(',')
 ans_df_columns = '序號,答案'.split(',')
+
+device = 'cuda' if torch.cuda.is_available() else 'cpu'

@@ -5,6 +5,7 @@ from sklearn.preprocessing import StandardScaler
 
 
 def data_transform(train_data):
+    '''
     train_data = train_data.assign(
         # Year = train_data['Serial'].astype(str).str[:4].astype(int),
         # Month = train_data['Serial'].astype(str).str[4:6].astype(int),
@@ -12,6 +13,7 @@ def data_transform(train_data):
         Hour = train_data['Serial'].astype(str).str[8:10].astype(int),
         Minute = train_data['Serial'].astype(str).str[10:12].astype(int),
     )
+    '''
     # train_data.loc[:, 'Time'] = train_data.apply(lambda row: int(str(row['Serial'])[8:10])*60 + int(str(row['Serial'])[10:12]), axis=1)
     
     # remove 'WindSpeed(m/s)' 
@@ -25,9 +27,12 @@ def preprocess(train_data):
         y_train = train_data['Power(mW)']
         y_train = y_train.astype('float32')
         train_data.drop(columns = ['Power(mW)'], inplace = True)
+        X_train = train_data['Pressure(hpa),Temperature(°C),Humidity(%),Sunlight(Lux)'.split(',')]
+    else:        
+        X_train = train_data['Pressure(hpa),Temperature(°C),Humidity(%),Sunlight(Lux),Day,Hour,Minute'.split(',')]
 
-    X_train = train_data['Pressure(hpa),Temperature(°C),Humidity(%),Sunlight(Lux),Day,Hour,Minute'.split(',')]
 
+    '''
     numeric_features = 'Pressure(hpa),Temperature(°C),Humidity(%),Sunlight(Lux)'.split(',')
     numeric_data = X_train[numeric_features]
     imputer = SimpleImputer(strategy = "mean")
@@ -37,6 +42,7 @@ def preprocess(train_data):
     scaled_numeric_data = scaler.fit_transform(imputed_numeric_data)
     X_train.loc[:, numeric_features] = scaled_numeric_data
     X_train = X_train.astype('float32')
+    '''
     return X_train, y_train
 
 if __name__ == '__main__':
