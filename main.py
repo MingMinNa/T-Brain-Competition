@@ -17,7 +17,7 @@ if __name__ == '__main__':
         
         if current_location != q_date_df.loc[idx, 'location']:
 
-            train_data = related_data.get_all_data(location = q_date_df.loc[idx, 'location'])
+            train_data = related_data.get_all_data(location = q_date_df.loc[idx, 'location'], src = 'IncompleteAVG')
             train_data = data_preprocess.data_transform(train_data)
             X_train, y_train = data_preprocess.preprocess(train_data)
             current_location = q_date_df.loc[idx, 'location']
@@ -25,7 +25,7 @@ if __name__ == '__main__':
             if regression_model is not None:   del regression_model
             regression_model = regression_nn.build_model(X_train, y_train, epochs = 100)
 
-        recent_df = related_data.get_date_data(target_date = str(q_date_df.loc[idx, 'date']), location = q_date_df.loc[idx, 'location'], day_diff = 5)
+        recent_df = related_data.get_date_data(target_date = str(q_date_df.loc[idx, 'date']), location = q_date_df.loc[idx, 'location'], day_diff = 5, src = 'IncompleteAVG')
         input_df = related_data.merge_by_time(recent_df, date = str(q_date_df.loc[idx, 'date']))
 
         # complement the empty day with average value

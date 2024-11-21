@@ -69,7 +69,7 @@ def build_model(X_train, y_train, random_seed = 42, learning_rate = 0.005, epoch
     for epoch in tqdm(range(epochs)):
         model.train()
         epoch_loss = 0.0
-        for batch_X, batch_y in train_loader:
+        for batch_X, batch_y in all_loader:
             optimizer.zero_grad()
             predictions = model(batch_X.unsqueeze(1)).squeeze()
             loss = criterion(predictions, batch_y)

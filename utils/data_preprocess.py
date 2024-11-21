@@ -20,7 +20,7 @@ def data_transform(train_data):
     train_data = train_data.drop(columns = ['Serial', 'WindSpeed(m/s)']) 
     return train_data
 
-def preprocess(train_data):
+def preprocess(train_data, stanard_deviation = False):
 
     X_train, y_train = None, None
     if 'Power(mW)' in train_data.columns:
@@ -31,18 +31,17 @@ def preprocess(train_data):
     else:        
         X_train = train_data['Pressure(hpa),Temperature(°C),Humidity(%),Sunlight(Lux),Day,Hour,Minute'.split(',')]
 
+    if stanard_deviation == True:
+        numeric_features = 'Pressure(hpa),Temperature(°C),Humidity(%),Sunlight(Lux)'.split(',')
+        numeric_data = X_train[numeric_features]
+        imputer = SimpleImputer(strategy = "mean")
+        imputed_numeric_data = imputer.fit_transform(numeric_data)
+        
+        scaler = StandardScaler()
+        scaled_numeric_data = scaler.fit_transform(imputed_numeric_data)
+        X_train.loc[:, numeric_features] = scaled_numeric_data
+        X_train = X_train.astype('float32')
 
-    '''
-    numeric_features = 'Pressure(hpa),Temperature(°C),Humidity(%),Sunlight(Lux)'.split(',')
-    numeric_data = X_train[numeric_features]
-    imputer = SimpleImputer(strategy = "mean")
-    imputed_numeric_data = imputer.fit_transform(numeric_data)
-    
-    scaler = StandardScaler()
-    scaled_numeric_data = scaler.fit_transform(imputed_numeric_data)
-    X_train.loc[:, numeric_features] = scaled_numeric_data
-    X_train = X_train.astype('float32')
-    '''
     return X_train, y_train
 
 if __name__ == '__main__':

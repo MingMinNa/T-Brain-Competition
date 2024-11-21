@@ -91,7 +91,8 @@ def build_answer(output_df):
     output_df.set_index('序號', inplace = True)
 
     for i in template_df.index:
-        template_df.loc[i, '答案'] = output_df.loc[template_df.loc[i, '序號'], '答案']
+        ans = output_df.loc[template_df.loc[i, '序號'], '答案']
+        template_df.loc[i, '答案'] = output_df.loc[template_df.loc[i, '序號'], '答案'] if ans > 0 else 0
     
     file_idx = len(os.listdir(os.path.join(const.SUBMISSION_FOLDER, 'answer'))) + 1
     template_df.to_csv(os.path.join(const.SUBMISSION_FOLDER, 'answer', f'answer_{file_idx}.csv'), index=False, encoding="utf-8-sig")
