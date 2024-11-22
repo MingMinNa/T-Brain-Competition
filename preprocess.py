@@ -8,7 +8,7 @@ import os
 project_root = os.getcwd()
 train_avg_path = os.path.join(project_root, "TrainData(AVG)")
 train_incomplete_avg_path = os.path.join(project_root, "TrainData(IncompleteAVG)")
-output_csv_path = os.path.join(project_root, "Output-CSV")
+output_csv_path = os.path.join(project_root, "TrainData")
 
 
 def parse_serial(df, serial_column="Serial"):
@@ -39,7 +39,11 @@ def one_hot_encode_device(df, all_device_ids):
 
 def load_train_data(train_avg_dir, train_incomplete_avg_dir):
     """
-    Loads all CSV files from 'TrainData(AVG)' and 'TrainData(IncompleteAVG)' directories and merges them into a single DataFrame.
+    Loads all CSV files from 'TrainData(AVG)' and 'TrainData(IncompleteAVG)' directories and merges them into separate DataFrames.
+
+    Returns:
+        combined_data (DataFrame): Combined data from both average and incomplete average datasets.
+        combined_incomplete (DataFrame): Combined data from incomplete average datasets only.
     """
     all_data_avg = []
     for i in range(1, 18):
@@ -62,36 +66,68 @@ def load_train_data(train_avg_dir, train_incomplete_avg_dir):
     # Combine all incomplete average data
     combined_incomplete = pd.concat(all_data_incomplete, ignore_index=True) if all_data_incomplete else pd.DataFrame()
     # Merge the two datasets
-    combined_data = pd.concat([combined_avg, combined_incomplete], ignore_index=True)
+    combined_data = (
+        pd.concat([combined_avg, combined_incomplete], ignore_index=True)
+        if not combined_incomplete.empty
+        else combined_avg
+    )
 
-    return combined_data
+    return combined_data, combined_incomplete
+
+
+def process_and_save(df, output_file):
+    """
+    Processes the DataFrame by parsing the 'Serial' column, one-hot encoding 'DeviceID',
+    sorting, dropping unnecessary columns, and saving to a CSV file.
+
+    Args:
+        df (DataFrame): The DataFrame to process.
+        output_file (str): The path to save the processed CSV.
+    """
+    # Parse the 'Serial' column
+    df = parse_serial(df, serial_column="Serial")
+
+    # One-Hot Encode 'DeviceID'
+    unique_device_ids = df["DeviceID"].unique()
+    df = one_hot_encode_device(df, unique_device_ids)
+
+    # Sort the data by 'DeviceID' and 'Datetime'
+    df = df.sort_values(by=["DeviceID", "Datetime"]).reset_index(drop=True)
+
+    # Remove original 'DeviceID' and 'Datetime' columns if not needed
+    columns_to_drop = ["DeviceID", "Datetime"]
+    df = df.drop(columns=columns_to_drop, errors="ignore")
+
+    # Create output directory if it doesn't exist
+    os.makedirs(os.path.dirname(output_file), exist_ok=True)
+
+    # Save the processed DataFrame to a CSV file
+    df.to_csv(output_file, index=False, encoding="utf-8")
+    print(f"Data saved to {output_file}")
 
 
 def main():
     # Load the data
-    combined_df = load_train_data(train_avg_path, train_incomplete_avg_path)
-    print(f"Total records loaded: {len(combined_df)}")
+    combined_df, combined_incomplete_df = load_train_data(train_avg_path, train_incomplete_avg_path)
+    print(f"Total records loaded (combined): {len(combined_df)}")
+    print(f"Total records loaded (Incomplete AVG): {len(combined_incomplete_df)}")
 
-    # Parse the 'Serial' column
-    combined_df = parse_serial(combined_df, serial_column="Serial")
+    # Define output files
+    output_file_combined = os.path.join(output_csv_path, "train_data.csv")
+    output_file_incomplete = os.path.join(output_csv_path, "incomplete_avg_train_data.csv")
 
-    # One-Hot Encode 'DeviceID'
-    unique_device_ids = combined_df["DeviceID"].unique()
-    combined_df = one_hot_encode_device(combined_df, unique_device_ids)
+    # Process and save combined data
+    if not combined_df.empty:
+        process_and_save(combined_df, output_file_combined)
+    else:
+        print("No data found in combined datasets to save.")
 
-    # Sort the data by 'DeviceID' and 'Datetime'
-    combined_df = combined_df.sort_values(by=["DeviceID", "Datetime"]).reset_index(drop=True)
+    # Process and save incomplete average data
+    if not combined_incomplete_df.empty:
+        process_and_save(combined_incomplete_df, output_file_incomplete)
+    else:
+        print("No data found in Incomplete AVG datasets to save.")
 
-    # Remove original 'DeviceID' and 'Datetime' columns if not needed
-    columns_to_drop = ["DeviceID", "Datetime"]
-    combined_df = combined_df.drop(columns=columns_to_drop, errors="ignore")
-
-    # Create output directory if it doesn't exist
-    os.makedirs(output_csv_path, exist_ok=True)
-
-    # Save the processed DataFrame to a CSV file
-    output_file = os.path.join(output_csv_path, "train_data.csv")
-    combined_df.to_csv(output_file, index=False, encoding="utf-8")
     print("Data processing complete.")
 
 
