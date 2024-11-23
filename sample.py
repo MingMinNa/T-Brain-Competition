@@ -10,13 +10,15 @@ import pandas as pd
 import joblib
 import os
 
+np.set_printoptions(suppress=True, precision=2)
+
 # 設定LSTM往前看的筆數和預測筆數
 LookBackNum = 12  # LSTM往前看的筆數
 ForecastNum = 48  # 預測筆數
 
 # Define project paths
 project_root = os.getcwd()
-train_data_path = os.path.join(project_root, "TrainData", "train_data.csv")
+train_data_path = os.path.join(project_root, "TrainData", "avg_train_data.csv")
 incomplete_avg_train_data_path = os.path.join(project_root, "TrainData", "incomplete_avg_train_data.csv")
 submission_path = os.path.join(project_root, "Submission", "upload.csv")
 output_dir = os.path.join(project_root, "Output")
@@ -33,7 +35,7 @@ Regression_X_train = SourceData[
         "Humidity(%)",
         "Sunlight(Lux)",
         "Month",
-        "Hour",
+        "DeviceID",
     ]
 ].values
 Regression_y_train = SourceData[["Power(mW)"]].values
@@ -46,7 +48,7 @@ AllOutPut = SourceData[
         "Humidity(%)",
         "Sunlight(Lux)",
         "Month",
-        "Hour",
+        "DeviceID",
     ]
 ].values
 
@@ -68,14 +70,14 @@ y_train = np.array(y_train)
 
 # Reshaping
 # (samples 是訓練樣本數量,timesteps 是每個樣本的時間步長,features 是每個時間步的特徵數量)
-X_train = np.reshape(X_train, (X_train.shape[0], X_train.shape[1], 6))
+X_train = np.reshape(X_train, (X_train.shape[0], X_train.shape[1], X_train.shape[2]))
 
 
 # %%
 # ============================建置&訓練「LSTM模型」============================
 # 建置LSTM模型
 regressor = Sequential()
-regressor.add(LSTM(units=128, return_sequences=True, input_shape=(X_train.shape[1], 6)))
+regressor.add(LSTM(units=128, return_sequences=True, input_shape=(X_train.shape[1], X_train.shape[2])))
 regressor.add(LSTM(units=64))
 regressor.add(Dropout(0.2))
 
@@ -124,7 +126,7 @@ PredictPower = []  # 存放預測值(發電量)
 count = 0
 while count < len(EXquestion):
     print("count : ", count)
-    LocationCode = int(EXquestion[count])
+    LocationCode = int(EXquestion[count].item())
     strLocationCode = str(LocationCode)[-2:]
     if LocationCode < 10:
         strLocationCode = "0" + LocationCode
@@ -138,7 +140,7 @@ while count < len(EXquestion):
             "Humidity(%)",
             "Sunlight(Lux)",
             "Month",
-            "Hour",
+            "DeviceID",
         ]
     ].values
 
@@ -146,15 +148,13 @@ while count < len(EXquestion):
 
     # 找到相同的一天，把12個資料都加進inputs
     for DaysCount in range(len(ReferTitle)):
-        if str(int(ReferTitle[DaysCount]))[:8] == str(int(EXquestion[count]))[:8]:
+        if str(int(ReferTitle[DaysCount].item()))[:8] == str(int(EXquestion[count].item()))[:8]:
             TempData = ReferData[DaysCount].reshape(1, -1)
             TempData = LSTM_MinMaxModel.transform(TempData)
             inputs.append(TempData)
 
     # 用迴圈不斷使新的預測值塞入參考資料，並預測下一筆資料
     for i in range(ForecastNum):
-
-        # print(i)
 
         # 將新的預測值加入參考資料(用自己的預測值往前看)
         if i > 0:
@@ -168,10 +168,26 @@ while count < len(EXquestion):
         NewTest = np.array(X_test)
         NewTest = np.reshape(NewTest, (NewTest.shape[0], NewTest.shape[1], 6))
 
+        # 使用訓練好的模型進行預測
         predicted = regressor.predict(NewTest)
+
+        # 將預測結果加入 PredictOutput
         PredictOutput.append(predicted)
-        PredictPower.append(np.round(Regression.predict(predicted), 2).flatten())
-        print(np.round(Regression.predict(predicted), 2).flatten())
+
+        # 使用回歸模型進行二次預測
+        regression_pred = Regression.predict(predicted)
+
+        # 將負數預測值校正為0
+        regression_pred = np.maximum(regression_pred, 0)
+
+        # 將預測值四捨五入到小數點後兩位並展平
+        regression_pred = np.round(regression_pred, 2).flatten()
+
+        # 將校正後的預測值加入 PredictPower
+        PredictPower.append(regression_pred)
+
+        # 打印校正後的預測值
+        print(regression_pred)
 
     # 每次預測都要預測48個，因此加48個會切到下一天
     # 0~47,48~95,96~143...

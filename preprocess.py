@@ -72,7 +72,7 @@ def load_train_data(train_avg_dir, train_incomplete_avg_dir):
         else combined_avg
     )
 
-    return combined_data, combined_incomplete
+    return combined_data, combined_avg, combined_incomplete
 
 
 def process_and_save(df, output_file):
@@ -95,7 +95,7 @@ def process_and_save(df, output_file):
     df = df.sort_values(by=["DeviceID", "Datetime"]).reset_index(drop=True)
 
     # Remove original 'DeviceID' and 'Datetime' columns if not needed
-    columns_to_drop = ["DeviceID", "Datetime"]
+    columns_to_drop = ["Datetime"]
     df = df.drop(columns=columns_to_drop, errors="ignore")
 
     # Create output directory if it doesn't exist
@@ -108,26 +108,19 @@ def process_and_save(df, output_file):
 
 def main():
     # Load the data
-    combined_df, combined_incomplete_df = load_train_data(train_avg_path, train_incomplete_avg_path)
+    combined_df, combined_avg_df, combined_incomplete_df = load_train_data(train_avg_path, train_incomplete_avg_path)
     print(f"Total records loaded (combined): {len(combined_df)}")
     print(f"Total records loaded (Incomplete AVG): {len(combined_incomplete_df)}")
 
     # Define output files
     output_file_combined = os.path.join(output_csv_path, "train_data.csv")
+    output_file_complete = os.path.join(output_csv_path, "avg_train_data.csv")
     output_file_incomplete = os.path.join(output_csv_path, "incomplete_avg_train_data.csv")
 
     # Process and save combined data
-    if not combined_df.empty:
-        process_and_save(combined_df, output_file_combined)
-    else:
-        print("No data found in combined datasets to save.")
-
-    # Process and save incomplete average data
-    if not combined_incomplete_df.empty:
-        process_and_save(combined_incomplete_df, output_file_incomplete)
-    else:
-        print("No data found in Incomplete AVG datasets to save.")
-
+    process_and_save(combined_df, output_file_combined)
+    process_and_save(combined_avg_df, output_file_complete)
+    process_and_save(combined_incomplete_df, output_file_incomplete)
     print("Data processing complete.")
 
 
