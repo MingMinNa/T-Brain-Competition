@@ -61,11 +61,11 @@ def load_train_data(train_avg_dir, train_incomplete_avg_dir):
             df = pd.read_csv(file_path, encoding="utf-8")
             all_data_incomplete.append(df)
 
-    # Combine all average data
+
     combined_avg = pd.concat(all_data_avg, ignore_index=True) if all_data_avg else pd.DataFrame()
-    # Combine all incomplete average data
+
     combined_incomplete = pd.concat(all_data_incomplete, ignore_index=True) if all_data_incomplete else pd.DataFrame()
-    # Merge the two datasets
+
     combined_data = (
         pd.concat([combined_avg, combined_incomplete], ignore_index=True)
         if not combined_incomplete.empty
@@ -84,24 +84,18 @@ def process_and_save(df, output_file):
         df (DataFrame): The DataFrame to process.
         output_file (str): The path to save the processed CSV.
     """
-    # Parse the 'Serial' column
     df = parse_serial(df, serial_column="Serial")
-
-    # One-Hot Encode 'DeviceID'
+    
     unique_device_ids = df["DeviceID"].unique()
     df = one_hot_encode_device(df, unique_device_ids)
 
-    # Sort the data by 'DeviceID' and 'Datetime'
     df = df.sort_values(by=["DeviceID", "Datetime"]).reset_index(drop=True)
 
-    # Remove original 'DeviceID' and 'Datetime' columns if not needed
     columns_to_drop = ["Datetime"]
     df = df.drop(columns=columns_to_drop, errors="ignore")
 
-    # Create output directory if it doesn't exist
     os.makedirs(os.path.dirname(output_file), exist_ok=True)
 
-    # Save the processed DataFrame to a CSV file
     df.to_csv(output_file, index=False, encoding="utf-8")
     print(f"Data saved to {output_file}")
 
