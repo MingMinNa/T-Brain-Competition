@@ -6,23 +6,29 @@ import os
 
 # Define project directories
 project_root = os.getcwd()
-train_avg_path = os.path.join(project_root, "TrainData(AVG)")
-train_incomplete_avg_path = os.path.join(project_root, "TrainData(IncompleteAVG)")
-output_csv_path = os.path.join(project_root, "TrainData")
+additional_data_path = os.path.join(project_root, "AdditionalData", "additional_data.csv")
+avg_data_dir = os.path.join(project_root, "TrainData(AVG)")
+incomplete_avg_data_dir = os.path.join(project_root, "TrainData(IncompleteAVG)")
+output_csv_dir = os.path.join(project_root, "TrainData")
 
 
-def parse_serial(df, serial_column="Serial"):
+def parse_serial(df, additional_data_df, serial_column="Serial"):
     """
     Extracts time-related information from the 'Serial' column, including Datetime, DeviceID, Month, Hour, Season, and PartOfDay.
     """
     df[serial_column] = df[serial_column].astype(str)
+    df["Date"] = df[serial_column].str[:8]
+
+    additional_data_df["日期"] = additional_data_df["日期"].astype(str)
+    additional_cols = ["日期", "日出方位角", "日中天仰角", "日落方位角"]
+    df = df.merge(additional_data_df[additional_cols], left_on="Date", right_on="日期", how="left")
+    df.drop(columns=["Date", "日期"], inplace=True)
 
     df["Datetime"] = pd.to_datetime(df[serial_column].str[:12], format="%Y%m%d%H%M", errors="coerce")
-
-    df["DeviceID"] = df[serial_column].str[-2:]
-
     df["Month"] = df["Datetime"].dt.month
     df["Hour"] = df["Datetime"].dt.hour
+    df["Minute"] = df["Datetime"].dt.minute
+    df["DeviceID"] = df[serial_column].str[-2:]
     return df
 
 
@@ -37,13 +43,9 @@ def one_hot_encode_device(df, all_device_ids):
     return df
 
 
-def load_train_data(train_avg_dir, train_incomplete_avg_dir):
+def load_train_data(train_avg_dir, train_incomplete_avg_dir, additional_data_path):
     """
     Loads all CSV files from 'TrainData(AVG)' and 'TrainData(IncompleteAVG)' directories and merges them into separate DataFrames.
-
-    Returns:
-        combined_data (DataFrame): Combined data from both average and incomplete average datasets.
-        combined_incomplete (DataFrame): Combined data from incomplete average datasets only.
     """
     all_data_avg = []
     for i in range(1, 18):
@@ -61,6 +63,8 @@ def load_train_data(train_avg_dir, train_incomplete_avg_dir):
             df = pd.read_csv(file_path, encoding="utf-8")
             all_data_incomplete.append(df)
 
+    if os.path.exists(additional_data_path):
+        additional_data = pd.read_csv(additional_data_path, encoding="utf-8")
 
     combined_avg = pd.concat(all_data_avg, ignore_index=True) if all_data_avg else pd.DataFrame()
 
@@ -72,10 +76,10 @@ def load_train_data(train_avg_dir, train_incomplete_avg_dir):
         else combined_avg
     )
 
-    return combined_data, combined_avg, combined_incomplete
+    return combined_data, combined_avg, combined_incomplete, additional_data
 
 
-def process_and_save(df, output_file):
+def process_and_save(df, additional_data_df, output_file):
     """
     Processes the DataFrame by parsing the 'Serial' column, one-hot encoding 'DeviceID',
     sorting, dropping unnecessary columns, and saving to a CSV file.
@@ -84,8 +88,8 @@ def process_and_save(df, output_file):
         df (DataFrame): The DataFrame to process.
         output_file (str): The path to save the processed CSV.
     """
-    df = parse_serial(df, serial_column="Serial")
-    
+    df = parse_serial(df, additional_data_df, serial_column="Serial")
+
     unique_device_ids = df["DeviceID"].unique()
     df = one_hot_encode_device(df, unique_device_ids)
 
@@ -102,19 +106,23 @@ def process_and_save(df, output_file):
 
 def main():
     # Load the data
-    combined_df, combined_avg_df, combined_incomplete_df = load_train_data(train_avg_path, train_incomplete_avg_path)
+    combined_df, combined_avg_df, combined_incomplete_df, additional_data_df = load_train_data(
+        avg_data_dir, incomplete_avg_data_dir, additional_data_path
+    )
     print(f"Total records loaded (combined): {len(combined_df)}")
+    print(f"Total records loaded (AVG): {len(combined_avg_df)}")
     print(f"Total records loaded (Incomplete AVG): {len(combined_incomplete_df)}")
+    print(f"Total records loaded (Additional): {len(additional_data_df)}")
 
     # Define output files
-    output_file_combined = os.path.join(output_csv_path, "train_data.csv")
-    output_file_complete = os.path.join(output_csv_path, "avg_train_data.csv")
-    output_file_incomplete = os.path.join(output_csv_path, "incomplete_avg_train_data.csv")
+    output_file_combined = os.path.join(output_csv_dir, "total_train_data.csv")
+    output_file_complete = os.path.join(output_csv_dir, "avg_train_data.csv")
+    output_file_incomplete = os.path.join(output_csv_dir, "incomplete_avg_train_data.csv")
 
     # Process and save combined data
-    process_and_save(combined_df, output_file_combined)
-    process_and_save(combined_avg_df, output_file_complete)
-    process_and_save(combined_incomplete_df, output_file_incomplete)
+    process_and_save(combined_df, additional_data_df, output_file_combined)
+    process_and_save(combined_avg_df, additional_data_df, output_file_complete)
+    process_and_save(combined_incomplete_df, additional_data_df, output_file_incomplete)
     print("Data processing complete.")
 
 
