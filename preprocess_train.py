@@ -8,6 +8,7 @@ project_root = os.getcwd()
 avg_data_dir = os.path.join(project_root, "TrainData(AVG)")
 incomplete_avg_data_dir = os.path.join(project_root, "TrainData(IncompleteAVG)")
 additional_dir = os.path.join(project_root, "AdditionalTrainData")
+submission_path = os.path.join(project_root, "Submission", "upload.csv")
 output_csv_dir = os.path.join(project_root, "TrainData")
 
 
@@ -19,12 +20,12 @@ def parse_serial(df, additional_data_df, serial_column="Serial"):
     df = df.merge(additional_data_df[additional_cols], left_on="Serial", right_on="Serial", how="left")
 
     df["Datetime"] = pd.to_datetime(df[serial_column].str[:12], format="%Y%m%d%H%M", errors="coerce")
+    df["Date"] = df["Datetime"].dt.date
     df["Month"] = df["Datetime"].dt.month
     df["Hour"] = df["Datetime"].dt.hour
     df["Minute"] = df["Datetime"].dt.minute
     df["DeviceID"] = df[serial_column].str[-2:]
     return df
-
 
 def one_hot_encode_device(df, all_device_ids):
     df["DeviceID"] = df["DeviceID"].astype(str).str.zfill(2)
