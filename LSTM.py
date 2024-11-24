@@ -1,6 +1,7 @@
 # %%
 from tensorflow.keras.models import load_model, Sequential  # type: ignore
 from tensorflow.keras.layers import LSTM, Dense, Dropout  # type: ignore
+from tensorflow.keras.optimizers import Adam  # type: ignore
 
 from sklearn.linear_model import LinearRegression, Ridge
 from sklearn.preprocessing import MinMaxScaler
@@ -18,7 +19,7 @@ ForecastNum = 48  # 預測筆數
 
 # Define project paths
 project_root = os.getcwd()
-train_data_path = os.path.join(project_root, "TrainData", "avg_train_data.csv")
+train_data_path = os.path.join(project_root, "TrainData", "total_train_data.csv")
 incomplete_avg_train_data_path = os.path.join(project_root, "TrainData", "incomplete_avg_train_data.csv")
 submission_path = os.path.join(project_root, "Submission", "upload.csv")
 output_dir = os.path.join(project_root, "Output")
@@ -34,8 +35,8 @@ Regression_X_train = SourceData[
         "Temperature(°C)",
         "Humidity(%)",
         "Sunlight(Lux)",
-        "Month",
-        "DeviceID",
+        "ElevationAngle",
+        "Azimuth",
     ]
 ].values
 Regression_y_train = SourceData[["Power(mW)"]].values
@@ -47,10 +48,13 @@ AllOutPut = SourceData[
         "Temperature(°C)",
         "Humidity(%)",
         "Sunlight(Lux)",
-        "Month",
-        "DeviceID",
+        "ElevationAngle",
+        "Azimuth",
     ]
 ].values
+
+assert not np.isnan(AllOutPut).any(), "Source data contains NaN values."
+assert not np.isinf(AllOutPut).any(), "Source data contains Inf values."
 
 # 正規化
 LSTM_MinMaxModel = MinMaxScaler().fit(AllOutPut)
@@ -80,9 +84,10 @@ regressor = Sequential()
 regressor.add(LSTM(units=128, return_sequences=True, input_shape=(X_train.shape[1], X_train.shape[2])))
 regressor.add(LSTM(units=64))
 regressor.add(Dropout(0.2))
+optimizer = Adam(learning_rate=0.0001)
 
 # output layer
-regressor.add(Dense(units=6, activation="relu"))
+regressor.add(Dense(units=6))
 regressor.compile(optimizer="adam", loss="mean_squared_error")
 
 # 開始訓練
@@ -90,7 +95,7 @@ regressor.fit(X_train, y_train, epochs=100, batch_size=128)
 
 # 保存模型
 regressor.save("WheatherLSTM.h5")
-print("Model Saved")
+print("LSTM Model Saved")
 
 
 # %%
