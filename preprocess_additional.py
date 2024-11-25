@@ -16,10 +16,8 @@ def dms_to_decimal(dms_str):
 
 
 def calculate_solar_position(row, time):
-    # 將時間轉換為小時格式
     time_decimal = int(time[:2]) + int(time[2:]) / 60
 
-    # 將時間欄位轉為字符串，確保有前導零
     sunrise_str = f"{int(row['日出時刻']):04d}"
     sunset_str = f"{int(row['日落時刻']):04d}"
     noon_str = f"{int(row['太陽過中天']):04d}"
@@ -34,12 +32,10 @@ def calculate_solar_position(row, time):
     device_id = row["裝置ID"]
     latitude_dms = row["緯度(N)"]
 
-    # 將緯度轉換為十進制度
     latitude = dms_to_decimal(latitude_dms)
     phi = math.radians(latitude)  # 轉為弧度
 
     # 計算太陽赤緯角 (delta)
-    # 根據中天高度角公式: h_noon = 90 - latitude + delta => delta = h_noon + latitude - 90
     delta = math.radians(noon_altitude + latitude - 90)
 
     # 計算時角 (H)
@@ -54,10 +50,9 @@ def calculate_solar_position(row, time):
         h_rad = math.asin(math.sin(phi) * math.sin(delta) + math.cos(phi) * math.cos(delta) * math.cos(H_rad))
         h = math.degrees(h_rad)
     except:
-        h = 0.0  # 當太陽在地平線下時，仰角設為0
+        h = 0.0  # 當太陽在地平線下時，仰角設為 0
 
-    # 插值計算方位角 (A)
-    # 考慮太陽從日出到日落的移動，使用線性插值
+    # 插值計算方位角 (A)，使用線性插值
     if sunset_decimal != sunrise_decimal:
         A = sunrise_azimuth + (sunset_azimuth - sunrise_azimuth) * (
             (time_decimal - sunrise_decimal) / (sunset_decimal - sunrise_decimal)
@@ -113,10 +108,10 @@ def main():
 
             datetime_with_id = f"{date}{time}{device}"
 
-            results.append({"Serial": datetime_with_id, "ElevationAngle": altitude, "Azimuth": azimuth})
+            results.append({"Serial": datetime_with_id, "ElevationAngle(degree)": altitude, "Azimuth(degree)": azimuth})
 
     output_df = pd.DataFrame(results)
-    output_df = output_df[["Serial", "ElevationAngle", "Azimuth"]]
+    output_df = output_df[["Serial", "ElevationAngle(degree)", "Azimuth(degree)"]]
     output_df.to_csv(output_csv_path, index=False, sep=",", header=True, encoding="utf-8-sig")
     print("Data processing complete.")
 

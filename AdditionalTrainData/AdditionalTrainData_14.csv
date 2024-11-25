@@ -1,4 +1,4 @@
-﻿Serial,ElevationAngle,Azimuth
+﻿Serial,ElevationAngle(degree),Azimuth(degree)
 20240101064014,-0.12,115.81
 20240101065014,1.94,117.84
 20240101070014,3.97,119.87

@@ -8,7 +8,7 @@ project_root = os.getcwd()
 avg_data_dir = os.path.join(project_root, "TrainData(AVG)")
 incomplete_avg_data_dir = os.path.join(project_root, "TrainData(IncompleteAVG)")
 additional_dir = os.path.join(project_root, "AdditionalTrainData")
-submission_path = os.path.join(project_root, "Submission", "upload.csv")
+submission_dir = os.path.join(project_root, "Submission")
 output_csv_dir = os.path.join(project_root, "TrainData")
 
 
@@ -16,7 +16,7 @@ def parse_serial(df, additional_data_df, serial_column="Serial"):
     df[serial_column] = df[serial_column].astype(str)
     additional_data_df[serial_column] = additional_data_df[serial_column].astype(str)
 
-    additional_cols = ["Serial", "ElevationAngle", "Azimuth"]
+    additional_cols = ["Serial", "ElevationAngle(degree)", "Azimuth(degree)"]
     df = df.merge(additional_data_df[additional_cols], left_on="Serial", right_on="Serial", how="left")
 
     df["Datetime"] = pd.to_datetime(df[serial_column].str[:12], format="%Y%m%d%H%M", errors="coerce")
@@ -26,6 +26,18 @@ def parse_serial(df, additional_data_df, serial_column="Serial"):
     df["Minute"] = df["Datetime"].dt.minute
     df["DeviceID"] = df[serial_column].str[-2:]
     return df
+
+
+def parse_submission_serial(df, serial_column="Serial"):
+    df[serial_column] = df[serial_column].astype(str)
+    df["Datetime"] = pd.to_datetime(df[serial_column].str[:12], format="%Y%m%d%H%M", errors="coerce")
+    df["Date"] = df["Datetime"].dt.date
+    df["Month"] = df["Datetime"].dt.month
+    df["Hour"] = df["Datetime"].dt.hour
+    df["Minute"] = df["Datetime"].dt.minute
+    df["DeviceID"] = df[serial_column].str[-2:]
+    return df
+
 
 def one_hot_encode_device(df, all_device_ids):
     df["DeviceID"] = df["DeviceID"].astype(str).str.zfill(2)
@@ -83,11 +95,17 @@ def process_and_save(df, additional_data_df, output_file):
 
     df = df.sort_values(by=["DeviceID", "Datetime"]).reset_index(drop=True)
 
-    columns_to_drop = ["Datetime"]
-    df = df.drop(columns=columns_to_drop, errors="ignore")
+    # df = df.drop(columns=["Datetime"], errors="ignore")
 
     os.makedirs(os.path.dirname(output_file), exist_ok=True)
 
+    df.to_csv(output_file, index=False, encoding="utf-8")
+    print(f"Data saved to {output_file}")
+
+
+def process_and_save_submission(df, output_file):
+    df = parse_submission_serial(df, serial_column="Serial")
+    df = df.drop(columns=["Answer"], errors="ignore")
     df.to_csv(output_file, index=False, encoding="utf-8")
     print(f"Data saved to {output_file}")
 
@@ -98,20 +116,26 @@ def main():
         avg_data_dir, incomplete_avg_data_dir, additional_dir
     )
 
+    submission_path = os.path.join(submission_dir, "upload.csv")
+    submission_df = pd.read_csv(submission_path, encoding="utf-8")
+
     print(f"Total records loaded (combined): {len(combined_df)}")
     print(f"Total records loaded (AVG): {len(combined_avg_df)}")
     print(f"Total records loaded (Incomplete AVG): {len(combined_incomplete_df)}")
     print(f"Total records loaded (Additional): {len(combined_additional_df)}")
+    print(f"Total records loaded (Submission): {len(submission_df)}")
 
     # Define output files
     output_file_combined = os.path.join(output_csv_dir, "total_train_data.csv")
     output_file_complete = os.path.join(output_csv_dir, "avg_train_data.csv")
     output_file_incomplete = os.path.join(output_csv_dir, "incomplete_avg_train_data.csv")
+    output_file_submission = os.path.join(submission_dir, "submission.csv")
 
     # Process and save combined data
     process_and_save(combined_df, combined_additional_df, output_file_combined)
     process_and_save(combined_avg_df, combined_additional_df, output_file_complete)
     process_and_save(combined_incomplete_df, combined_additional_df, output_file_incomplete)
+    process_and_save_submission(submission_df, output_file_submission)
     print("Data processing complete.")
 
 
