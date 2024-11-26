@@ -5,7 +5,7 @@ from sklearn.preprocessing import StandardScaler
 
 
 def data_transform(train_data):
-    '''
+    
     train_data = train_data.assign(
         # Year = train_data['Serial'].astype(str).str[:4].astype(int),
         # Month = train_data['Serial'].astype(str).str[4:6].astype(int),
@@ -13,25 +13,32 @@ def data_transform(train_data):
         Hour = train_data['Serial'].astype(str).str[8:10].astype(int),
         Minute = train_data['Serial'].astype(str).str[10:12].astype(int),
     )
-    '''
+    
     # train_data.loc[:, 'Time'] = train_data.apply(lambda row: int(str(row['Serial'])[8:10])*60 + int(str(row['Serial'])[10:12]), axis=1)
     
     # remove 'WindSpeed(m/s)' 
     train_data = train_data.drop(columns = ['Serial', 'WindSpeed(m/s)']) 
     return train_data
 
-def preprocess(train_data, stanard_deviation = False):
+def preprocess(train_data, input_features, standardization = False):
 
     X_train, y_train = None, None
-    if 'Power(mW)' in train_data.columns:
+
+    if 'Power(mW)' in train_data.columns:   # train data
         y_train = train_data['Power(mW)']
         y_train = y_train.astype('float32')
         train_data.drop(columns = ['Power(mW)'], inplace = True)
-        X_train = train_data['Pressure(hpa),Temperature(°C),Humidity(%),Sunlight(Lux)'.split(',')]
-    else:        
-        X_train = train_data['Pressure(hpa),Temperature(°C),Humidity(%),Sunlight(Lux),Day,Hour,Minute'.split(',')]
+        X_train = train_data[input_features]
+    else:                                   # test data
+        X_train = train_data[input_features + ['Minute', 'Hour']]
+    
+    for i in X_train[X_train.isna().any(axis=1)].index:
+        for col in X_train.columns:
+            if pd.isna(X_train.loc[i, col]):
+                try:    X_train.loc[i, col] = X_train.loc[i - 1, col]
+                except: X_train.loc[i, col] = X_train.loc[i + 1, col]
 
-    if stanard_deviation == True:
+    if standardization == True:
         numeric_features = 'Pressure(hpa),Temperature(°C),Humidity(%),Sunlight(Lux)'.split(',')
         numeric_data = X_train[numeric_features]
         imputer = SimpleImputer(strategy = "mean")

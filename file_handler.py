@@ -4,6 +4,7 @@ import numpy as np
 from tqdm import tqdm
 import argparse
 import sys
+import re
 
 from utils import const
 
@@ -138,6 +139,24 @@ def make_IncompleteAVG_TrainData(dest_folder, src_folder):
 
     return
 
+def merge_additional_features(src_folder, features_folder):
+    
+    for file_name in tqdm(os.listdir(src_folder)):
+        location = int(re.search(r'(\d+)', file_name).group())
+        target_df = pd.read_csv(os.path.join(src_folder, file_name))
+        features_df = pd.read_csv(os.path.join(features_folder, f'AdditionalTrainData_{location:02d}.csv'))
+        features_df['Serial'] = features_df['Serial'].astype(str)
+        features_df.set_index('Serial', inplace = True)
+
+        for idx in target_df.index:
+            for col in features_df.columns:
+                try:
+                    target_df.loc[idx, col] = features_df.loc[str(target_df.loc[idx, 'Serial']), col]
+                except:
+                    target_df.loc[idx, col] = None
+        target_df.to_csv(os.path.join(src_folder, file_name), index = False)
+    return 
+
 def sort_q_date(q_date_path):
 
     q_date = pd.read_csv(q_date_path)
@@ -153,6 +172,8 @@ def init_argparser():
     parser.add_argument('-A', '--AVG', action="store_true", help = "從 Merge_TrainingData 中，生成 TrainData(AVG)")
     parser.add_argument('-I', '--IncompleteAVG', action="store_true", help="從 Merge_TrainingData 中，生成 TrainData(IncompleteAVG)")
     parser.add_argument('-S', '--Sort', action="store_true", help="執行 q_date.csv 的排序")
+    parser.add_argument('-F', '--Features', action="store_true", help="將額外特徵整合進 TrainData(AVG) 和 TrainData(IncompleteAVG)")
+
     return parser.parse_args()
 
 if __name__ == '__main__':
@@ -179,4 +200,12 @@ if __name__ == '__main__':
     if args.Sort == True:
         sys.stdout.write('---------- Sort q_date ----------\n')
         sort_q_date(q_date_path = os.path.join(const.SUBMISSION_FOLDER, 'q_date.csv'))
+    
+    if args.Features == True:
+        sys.stdout.write('--------- Merge Features ---------\n')
+        merge_additional_features(src_folder = os.path.join(const.GENERATE_AVG_FOLDER), 
+                                  features_folder = os.path.join(const.GENERATE_FOLDER, 'Additional_Features'))
+        merge_additional_features(src_folder = os.path.join(const.GENERATE_IncompleteAVG_FOLDER), 
+                                  features_folder = os.path.join(const.GENERATE_FOLDER, 'Additional_Features'))
+    
     quit()

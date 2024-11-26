@@ -13,18 +13,20 @@ TRAINING_FOLDER = os.path.join(PROJECT_FOLDER, 'Training_Data')
 SUBMISSION_FOLDER = os.path.join(PROJECT_FOLDER, 'submission')
 
 # Generate_folder
-GENERATE_MERGE_FOLDER = os.path.join(TRAINING_FOLDER, 'Generate', '36_Merged_TrainingData')
-GENERATE_AVG_FOLDER = os.path.join(TRAINING_FOLDER, 'Generate', 'Average_Data', 'TrainData(AVG)')
-GENERATE_IncompleteAVG_FOLDER = os.path.join(TRAINING_FOLDER, 'Generate', 'Average_Data', 'TrainData(IncompleteAVG)')
+GENERATE_FOLDER = os.path.join(TRAINING_FOLDER, 'Generate')
+GENERATE_MERGE_FOLDER = os.path.join(GENERATE_FOLDER, '36_Merged_TrainingData')
+GENERATE_AVG_FOLDER = os.path.join(GENERATE_FOLDER, 'Average_Data', 'TrainData(AVG)')
+GENERATE_IncompleteAVG_FOLDER = os.path.join(GENERATE_FOLDER, 'Average_Data', 'TrainData(IncompleteAVG)')
 
 # Given_folder
-GIVEN_RAW_DATA_FOLDER = os.path.join(TRAINING_FOLDER, 'Given', '36_TrainingData')
-GIVEN_ADDITIONAL_DATA_FOLDER = os.path.join(TRAINING_FOLDER, 'Given', '36_TrainingData_Additional_V2')
-GIVEN_AVG_FOLDER = os.path.join(TRAINING_FOLDER, 'Given', 'Average_Data', 'TrainData(AVG)')
-GIVEN_IncompleteAVG_FOLDER = os.path.join(TRAINING_FOLDER, 'Given', 'Average_Data', 'TrainData(IncompleteAVG)')
+GIVEN_FOLDER = os.path.join(TRAINING_FOLDER, 'Given')
+GIVEN_RAW_DATA_FOLDER = os.path.join(GIVEN_FOLDER, '36_TrainingData')
+GIVEN_ADDITIONAL_DATA_FOLDER = os.path.join(GIVEN_FOLDER, '36_TrainingData_Additional_V2')
+GIVEN_AVG_FOLDER = os.path.join(GIVEN_FOLDER, 'Average_Data', 'TrainData(AVG)')
+GIVEN_IncompleteAVG_FOLDER = os.path.join(GIVEN_FOLDER, 'Average_Data', 'TrainData(IncompleteAVG)')
 
 raw_data_columns = 'LocationCode,DateTime,WindSpeed(m/s),Pressure(hpa),Temperature(°C),Humidity(%),Sunlight(Lux),Power(mW)'.split(',')
-avg_data_columns = 'Serial,WindSpeed(m/s),Pressure(hpa),Temperature(°C),Humidity(%),Sunlight(Lux),Power(mW)'.split(',')
+avg_data_columns = 'Serial,WindSpeed(m/s),Pressure(hpa),Temperature(°C),Humidity(%),Sunlight(Lux),Power(mW),ElevationAngle,Azimuth'.split(',')
 ans_df_columns = '序號,答案'.split(',')
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'

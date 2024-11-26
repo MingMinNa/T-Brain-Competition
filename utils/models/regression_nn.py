@@ -5,13 +5,14 @@ from sklearn.model_selection import train_test_split
 import numpy as np
 import pandas as pd
 from tqdm import tqdm
+import copy
 
 from .. import const
 
 device = const.device
 
 class RegressionModel(nn.Module):
-    def __init__(self, input_dim):
+    def __init__(self, input_dim, input_features):
         super(RegressionModel, self).__init__()
         self.fc = nn.Sequential(
             nn.Linear(input_dim, 1024),
@@ -26,25 +27,29 @@ class RegressionModel(nn.Module):
             nn.ReLU(),
             nn.Linear(64, 1)
         )
+        self.input_features = input_features
     
     def forward(self, x):
         return self.fc(x)
 
 
-def build_model(X_train, y_train, random_seed = 42, learning_rate = 0.005, epochs = 150,batch_size = 32):
+def build_model(X_train, y_train, input_features,
+                random_seed = 42, learning_rate = 0.005, epochs = 150,batch_size = 32):
     
-    X_train = X_train['Pressure(hpa),Temperature(°C),Humidity(%),Sunlight(Lux)'.split(',')]
+    X_train = X_train[input_features]
     input_dim = X_train.shape[1]
-    
+
+    torch.manual_seed(random_seed)
     # 初始化模型
-    model = RegressionModel(input_dim).to(device)
+    model = RegressionModel(input_dim, input_features).to(device)
     
     # 定義損失函數和優化器
-    criterion = nn.MSELoss()
+    criterion = nn.L1Loss()
     optimizer = optim.Adam(model.parameters(), lr = learning_rate, weight_decay=1e-5)
     
 
     tmp_X_train, tmp_X_val, tmp_y_train, tmp_y_val = train_test_split(X_train, y_train, test_size = 0.2, shuffle = True, random_state = random_seed)
+
     # 構建數據加載器
     train_dataset = torch.utils.data.TensorDataset(
         torch.FloatTensor(tmp_X_train.values).to(device), 
@@ -59,12 +64,14 @@ def build_model(X_train, y_train, random_seed = 42, learning_rate = 0.005, epoch
         torch.FloatTensor(y_train.values).to(device)
     )
     train_loader = torch.utils.data.DataLoader(train_dataset, batch_size = batch_size, shuffle = True)
-    val_loader = torch.utils.data.DataLoader(val_dataset, batch_size = batch_size, shuffle = False)
-    all_loader = torch.utils.data.DataLoader(all_dataset, batch_size = batch_size, shuffle = False)
+    val_loader = torch.utils.data.DataLoader(val_dataset, batch_size = batch_size, shuffle = True)
+    all_loader = torch.utils.data.DataLoader(all_dataset, batch_size = batch_size, shuffle = True)
     
 
     scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.7)  # Add learning rate scheduler
 
+    min_val_loss = np.inf
+    best_model_state = copy.deepcopy(model.state_dict())
     # 開始訓練
     for epoch in tqdm(range(epochs)):
         model.train()
@@ -79,7 +86,7 @@ def build_model(X_train, y_train, random_seed = 42, learning_rate = 0.005, epoch
 
         scheduler.step()
 
-        if epoch % 10 != 0: continue
+        if epoch % 5 != 0: continue
         model.eval()
         epoch_val_loss = 0.0
         with torch.no_grad():
@@ -91,12 +98,32 @@ def build_model(X_train, y_train, random_seed = 42, learning_rate = 0.005, epoch
         print(f"Epoch {epoch + 1}/{epochs}, "
               f"Train Loss: {epoch_loss:.4f}, "
               f"Validation Loss: {epoch_val_loss:.4f}")
-            
-    return model
+        
+        if epoch_val_loss < min_val_loss:
+            min_val_loss = epoch_val_loss
+            best_model_state = copy.deepcopy(model.state_dict())
 
-def predict(model, X_test, date, location):
+    best_model = RegressionModel(X_train.shape[1], input_features).to(device)
+    best_model.load_state_dict(best_model_state)
+    for param in best_model.parameters():
+        param.requires_grad = False
     
-    copy_X_test = X_test['Pressure(hpa),Temperature(°C),Humidity(%),Sunlight(Lux)'.split(',')].astype('float32')
+    best_model.eval()
+    epoch_val_loss = 0.0
+    with torch.no_grad():
+        for batch_X, batch_y in val_loader:
+            predictions = best_model(batch_X.unsqueeze(1)).squeeze()
+            loss = criterion(predictions, batch_y)
+            epoch_val_loss += loss.item()
+
+    print(f"Best Validation Loss: {epoch_val_loss:.4f}")
+
+    return best_model
+
+def predict(model, X_test):
+    input_features = model.input_features
+    
+    copy_X_test = X_test[input_features].astype('float32')
     result_df = pd.DataFrame(columns = const.ans_df_columns)
 
     X_test_tensor = torch.tensor(copy_X_test.to_numpy(), dtype=torch.float32).to(device)
@@ -104,10 +131,8 @@ def predict(model, X_test, date, location):
     with torch.no_grad():
         predictions = model(X_test_tensor).cpu()
 
-    for i in X_test.index:
-        result_df.loc[i, :] = [f"{date}{int(X_test.loc[i, 'Hour']):02d}{int(X_test.loc[i, 'Minute']):02d}{location:02d}", f"{predictions[i].item():.2f}"]
-
-    return result_df
+    
+    return predictions
 
 if __name__ == '__main__':
     pass
