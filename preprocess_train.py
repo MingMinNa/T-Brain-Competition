@@ -19,6 +19,9 @@ def parse_serial(df, additional_data_df, serial_column="Serial"):
     additional_cols = ["Serial", "ElevationAngle(degree)", "Azimuth(degree)"]
     df = df.merge(additional_data_df[additional_cols], left_on="Serial", right_on="Serial", how="left")
 
+    MAX_LUX = 117758.2
+    df["SunlightSaturated"] = (df["Sunlight(Lux)"] >= MAX_LUX).astype(int)
+
     df["Datetime"] = pd.to_datetime(df[serial_column].str[:12], format="%Y%m%d%H%M", errors="coerce")
     df["Date"] = df["Datetime"].dt.date
     df["Month"] = df["Datetime"].dt.month
@@ -94,10 +97,6 @@ def process_and_save(df, additional_data_df, output_file):
     df = one_hot_encode_device(df, unique_device_ids)
 
     df = df.sort_values(by=["DeviceID", "Datetime"]).reset_index(drop=True)
-
-    # df = df.drop(columns=["Datetime"], errors="ignore")
-
-    os.makedirs(os.path.dirname(output_file), exist_ok=True)
 
     df.to_csv(output_file, index=False, encoding="utf-8")
     print(f"Data saved to {output_file}")

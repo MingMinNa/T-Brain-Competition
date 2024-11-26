@@ -12,7 +12,8 @@ import os
 
 project_root = os.getcwd()
 submission_path = os.path.join(project_root, "Submission", "submission.csv")
-train_data_path = os.path.join(project_root, "TrainData", "avg_train_data_lag.csv")
+lstm_submission_path = os.path.join(project_root, "Submission", "LSTM+Regression.csv")
+train_data_path = os.path.join(project_root, "TrainData", "total_train_data_lag.csv")
 complete_train_data_path = os.path.join(project_root, "TrainData", "avg_train_data.csv")
 incomplete_train_data_path = os.path.join(project_root, "TrainData", "incomplete_avg_train_data.csv")
 output_module_path = os.path.join(project_root, "Module", "xgb_lag_model.pkl")
@@ -62,8 +63,10 @@ param_dist = {
 
 xgb = XGBRegressor(
     objective="reg:absoluteerror",
+    eval_metric="mae",
     random_state=42,
     tree_method="auto",
+    verbosity=0,
 )
 
 random_search = RandomizedSearchCV(
@@ -168,7 +171,7 @@ for idx, row in submission_df.iterrows():
     predicted_power[device_id][current_time] = max(0, float(formatted_pred))
 
 # 保存預測結果
-output_csv_path = os.path.join(project_root, "Output", "xgb_lag_regression.csv")
+output_csv_path = os.path.join(project_root, "Output", "xgb_lag_regression_v2.csv")
 predictions_df = pd.DataFrame(predictions)
 predictions_df.to_csv(output_csv_path, index=False, encoding="utf-8")
 print(f"Data saved to {output_csv_path}")
@@ -207,8 +210,8 @@ for idx, row in submission_df.iterrows():
     ].copy()
 
     relevant_data["DaysDiff"] = (prediction_date - relevant_data["Date"]).dt.days.abs()
-    nearest_2_days = relevant_data.nsmallest(2, "DaysDiff")
-    avg_features = nearest_2_days[feature_columns].mean()
+    nearest_5_days = relevant_data.nsmallest(2, "DaysDiff")
+    avg_features = nearest_5_days[feature_columns].mean()
 
     lags = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120]
     lag_powers = {}
@@ -259,7 +262,92 @@ for idx, row in submission_df.iterrows():
     predicted_power[device_id][current_time] = max(0, float(formatted_pred))
 
 # 保存預測結果
-output_csv_path = os.path.join(project_root, "Output", "xgb_lag_closest.csv")
+output_csv_path = os.path.join(project_root, "Output", "xgb_lag_closest2_v2.csv")
+predictions_df = pd.DataFrame(predictions)
+predictions_df.to_csv(output_csv_path, index=False, encoding="utf-8")
+print(f"Data saved to {output_csv_path}")
+
+# %%
+# ============================ 預測發電量(LSTM) ============================
+xgb_model = joblib.load(output_module_path)
+
+lstm_df = pd.read_csv(lstm_submission_path)
+
+submission_df = pd.read_csv(submission_path)
+submission_df["Date"] = pd.to_datetime(submission_df["Date"])
+submission_df["Datetime"] = pd.to_datetime(submission_df["Datetime"])
+
+incomplete_df = pd.read_csv(incomplete_train_data_path)
+incomplete_df["Date"] = pd.to_datetime(incomplete_df["Date"])
+incomplete_df["Datetime"] = pd.to_datetime(incomplete_df["Datetime"])
+
+predictions = []
+predicted_power = {}
+
+for idx, row in submission_df.iterrows():
+    serial = row["Serial"]
+    prediction_datetime = row["Datetime"]
+    prediction_date = row["Date"]
+    device_id = row["DeviceID"]
+    month = row["Month"]
+
+    current_time = prediction_date.replace(hour=row["Hour"], minute=row["Minute"], second=0, microsecond=0)
+
+    lags = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120]
+    lag_powers = {}
+
+    for lag in lags:
+        lag_time = prediction_datetime - timedelta(minutes=lag)
+        lag_row = incomplete_df[(incomplete_df["DeviceID"] == device_id) & (incomplete_df["Datetime"] == lag_time)]
+
+        if lag_row.empty:
+            lag_powers[lag] = predicted_power.get(device_id, {}).get(lag_time, 0)
+        else:
+            lag_powers[lag] = lag_row["Power(mW)"].values[0]
+
+    pressure = lstm_df[(lstm_df["Serial"] == serial)]["Pressure(hpa)"]
+    temperature = lstm_df[(lstm_df["Serial"] == serial)]["Temperature(°C)"]
+    humidity = lstm_df[(lstm_df["Serial"] == serial)]["Humidity(%)"]
+    sunlight = lstm_df[(lstm_df["Serial"] == serial)]["Sunlight(Lux)"]
+
+    feature_dict = {
+        "Pressure(hpa)": pressure.iloc[0],
+        "Temperature(°C)": temperature.iloc[0],
+        "Humidity(%)": humidity.iloc[0],
+        "Sunlight(Lux)": sunlight.iloc[0],
+        "ElevationAngle(degree)": row["ElevationAngle(degree)"],
+        "Azimuth(degree)": row["Azimuth(degree)"],
+        **{f"lag_{i+1}_Power(mW)": lag_powers[lag] for i, lag in enumerate(lags)},
+        "Month": row["Month"],
+    }
+
+    # 添加 DeviceID 的 One-Hot 編碼
+    for col in device_id_columns:
+        feature_dict[col] = 1 if col == f"DeviceID_{str(device_id).zfill(2)}" else 0
+
+    # 創建 DataFrame
+    feature_df = pd.DataFrame([feature_dict])
+
+    # 預測
+    power_pred = xgb_model.predict(feature_df)[0]
+    rounded_power_pred = round(power_pred, 2)
+    formatted_pred = f"{rounded_power_pred:.2f}"
+    print(f"{idx + 1}: {formatted_pred}")
+
+    predictions.append(
+        {
+            "序號": serial,
+            "答案": max(0, float(formatted_pred)),
+        }
+    )
+
+    if device_id not in predicted_power:
+        predicted_power[device_id] = {}
+
+    predicted_power[device_id][current_time] = max(0, float(formatted_pred))
+
+# 保存預測結果
+output_csv_path = os.path.join(project_root, "Output", "xgb_lag_lstm_v1.csv")
 predictions_df = pd.DataFrame(predictions)
 predictions_df.to_csv(output_csv_path, index=False, encoding="utf-8")
 print(f"Data saved to {output_csv_path}")

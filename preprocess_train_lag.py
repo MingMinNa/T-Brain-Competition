@@ -3,7 +3,7 @@ import os
 
 
 project_root = os.getcwd()
-train_data_path = os.path.join(project_root, "TrainData", "avg_train_data.csv")
+train_data_path = os.path.join(project_root, "TrainData", "total_train_data.csv")
 output_dir = os.path.join(project_root, "TrainData")
 os.makedirs(output_dir, exist_ok=True)
 
@@ -21,7 +21,7 @@ def main():
 
     train_df.dropna(inplace=True)
 
-    output_file = os.path.join(output_dir, "avg_train_data_lag.csv")
+    output_file = os.path.join(output_dir, "total_train_data_lag.csv")
     train_df.to_csv(output_file, index=False, encoding="utf-8")
 
 

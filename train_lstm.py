@@ -120,22 +120,18 @@ while count < len(EXquestion):
         ]
     ].values
 
-    inputs = []  # 重置存放參考資料
+    inputs = []
 
-    # 找到相同的一天，把12個資料都加進inputs
     for DaysCount in range(len(ReferTitle)):
         if str(int(ReferTitle[DaysCount].item()))[:8] == str(int(EXquestion[count].item()))[:8]:
             TempData = ReferData[DaysCount].reshape(1, -1)
             TempData = LSTM_MinMaxModel.transform(TempData)
             inputs.append(TempData)
 
-    # 用迴圈不斷使新的預測值塞入參考資料，並預測下一筆資料
     for i in range(ForecastNum):
-        # 將新的預測值加入參考資料(用自己的預測值往前看)
         if i > 0:
             inputs.append(PredictOutput[i - 1].reshape(1, 4))
 
-        # 切出新的參考資料12筆(往前看12筆)
         X_test = []
         X_test.append(inputs[0 + i : LookBackNum + i])
 
@@ -160,16 +156,12 @@ df = pd.DataFrame(
     {
         "Serial": PredictSerial,
         # "WindSpeed(m/s)": PredictOutput_2d[:, 0],
-        "Pressure(hpa)": PredictOutput_2d[:, 1],
-        "Temperature(°C)": PredictOutput_2d[:, 2],
-        "Humidity(%)": PredictOutput_2d[:, 3],
-        "Sunlight(Lux)": PredictOutput_2d[:, 4],
+        "Pressure(hpa)": PredictOutput_2d[:, 0],
+        "Temperature(°C)": PredictOutput_2d[:, 1],
+        "Humidity(%)": PredictOutput_2d[:, 2],
+        "Sunlight(Lux)": PredictOutput_2d[:, 3],
     }
 )
-
-df[["Pressure(hpa)", "Temperature(°C)", "Humidity(%)", "Sunlight(Lux)"]] = df[
-    ["Pressure(hpa)", "Temperature(°C)", "Humidity(%)", "Sunlight(Lux)"]
-].round(2)
 
 df.to_csv(output_csv_path, index=False)
 print(f"Data saved to {output_csv_path}")
