@@ -3,7 +3,7 @@ import os
 
 
 project_root = os.getcwd()
-train_data_path = os.path.join(project_root, "TrainData", "avg_train_data.csv")
+train_data_path = os.path.join(project_root, "TrainData", "avg_train_data_lag.csv")
 output_dir = os.path.join(project_root, "TrainData")
 os.makedirs(output_dir, exist_ok=True)
 
@@ -40,17 +40,17 @@ def main():
 
             relevant_data["DaysDiff"] = (current_date - relevant_data["Date"]).dt.days.abs()
 
-            nearest_2_days = relevant_data.nsmallest(2, "DaysDiff")
+            nearest_5_days = relevant_data.nsmallest(5, "DaysDiff")
 
-            avg_value = nearest_2_days[feature].mean()
-            avg_values.append(round(nearest_2_days[feature].mean(), 2))
+            avg_value = nearest_5_days[feature].mean()
+            avg_values.append(round(nearest_5_days[feature].mean(), 2))
 
             if pd.isna(avg_value):
                 print(f"{idx+1}, {feature}: {avg_values[idx]}")
 
-        train_df[f"Avg_2D_{feature}"] = avg_values
+        train_df[f"Avg_5D_{feature}"] = avg_values
 
-    output_file = os.path.join(output_dir, "avg_train_data_closest.csv")
+    output_file = os.path.join(output_dir, "avg_train_data_lag_closest.csv")
     train_df.dropna(inplace=True)
     train_df.to_csv(output_file, index=False, encoding="utf-8")
 

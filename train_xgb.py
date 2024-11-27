@@ -35,7 +35,7 @@ feature_columns = [
 lags_columns = [f"lag_{i}_Power(mW)" for i in range(1, 13)]
 
 device_id_columns = [col for col in train_df.columns if "DeviceID_" in col]
-model_features = [f"{feature}" for feature in feature_columns] + lags_columns + ["Month"] + device_id_columns
+model_features = [f"{feature}" for feature in feature_columns] + lags_columns + ["Month", "Hour"] + device_id_columns
 
 print(model_features)
 
@@ -62,8 +62,7 @@ param_dist = {
 }
 
 xgb = XGBRegressor(
-    objective="reg:absoluteerror",
-    eval_metric="mae",
+    objective="reg:squarederror",
     random_state=42,
     tree_method="auto",
     verbosity=0,
@@ -72,11 +71,11 @@ xgb = XGBRegressor(
 random_search = RandomizedSearchCV(
     estimator=xgb,
     param_distributions=param_dist,
-    scoring="neg_mean_absolute_error",
+    scoring="neg_mean_squared_error",
     cv=tscv,
     verbose=2,
     n_iter=100,
-    n_jobs=-1,
+    n_jobs=4,
     random_state=42,
 )
 
@@ -143,6 +142,7 @@ for idx, row in submission_df.iterrows():
         "Azimuth(degree)": row["Azimuth(degree)"],
         **{f"lag_{i+1}_Power(mW)": lag_powers[lag] for i, lag in enumerate(lags)},
         "Month": row["Month"],
+        "Hour": row["Hour"],
     }
 
     # 添加 DeviceID 的 One-Hot 編碼
@@ -210,8 +210,9 @@ for idx, row in submission_df.iterrows():
     ].copy()
 
     relevant_data["DaysDiff"] = (prediction_date - relevant_data["Date"]).dt.days.abs()
-    nearest_5_days = relevant_data.nsmallest(2, "DaysDiff")
-    avg_features = nearest_5_days[feature_columns].mean()
+    nearest_2_days = relevant_data.nsmallest(5, "DaysDiff")
+    avg_features = nearest_2_days[feature_columns].mean()
+    print(avg_features)
 
     lags = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120]
     lag_powers = {}
@@ -234,6 +235,7 @@ for idx, row in submission_df.iterrows():
         "Azimuth(degree)": avg_features["Azimuth(degree)"],
         **{f"lag_{i+1}_Power(mW)": lag_powers[lag] for i, lag in enumerate(lags)},
         "Month": row["Month"],
+        "Hour": row["Hour"],
     }
 
     # 添加 DeviceID 的 One-Hot 編碼
@@ -262,7 +264,7 @@ for idx, row in submission_df.iterrows():
     predicted_power[device_id][current_time] = max(0, float(formatted_pred))
 
 # 保存預測結果
-output_csv_path = os.path.join(project_root, "Output", "xgb_lag_closest2_v2.csv")
+output_csv_path = os.path.join(project_root, "Output", "xgb_lag_closest2_v4.csv")
 predictions_df = pd.DataFrame(predictions)
 predictions_df.to_csv(output_csv_path, index=False, encoding="utf-8")
 print(f"Data saved to {output_csv_path}")
@@ -319,6 +321,7 @@ for idx, row in submission_df.iterrows():
         "Azimuth(degree)": row["Azimuth(degree)"],
         **{f"lag_{i+1}_Power(mW)": lag_powers[lag] for i, lag in enumerate(lags)},
         "Month": row["Month"],
+        "Hour": row["Hour"],
     }
 
     # 添加 DeviceID 的 One-Hot 編碼
