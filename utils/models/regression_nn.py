@@ -124,15 +124,23 @@ def predict(model, X_test):
     input_features = model.input_features
     
     copy_X_test = X_test[input_features].astype('float32')
-    result_df = pd.DataFrame(columns = const.ans_df_columns)
 
+    model = model.to(device)
     X_test_tensor = torch.tensor(copy_X_test.to_numpy(), dtype=torch.float32).to(device)
     model.eval()
     with torch.no_grad():
         predictions = model(X_test_tensor).cpu()
 
-    
     return predictions
+
+
+def load_model(model_path):
+    regression_model = torch.load(model_path, weights_only = False)
+    return regression_model
+
+def save_model(model_path, regression_model):
+    torch.save(regression_model, model_path)
+    return
 
 if __name__ == '__main__':
     pass

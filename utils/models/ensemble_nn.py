@@ -132,5 +132,13 @@ def predict(model, X_test):
 
     return predictions
 
+def load_model(model_path):
+    ensemble_model = torch.load(model_path, weights_only = False)
+    return ensemble_model
+
+def save_model(model_path, ensemble_model):
+    torch.save(ensemble_model, model_path)
+    return
+
 if __name__ == '__main__':
     pass

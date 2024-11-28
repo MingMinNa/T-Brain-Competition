@@ -7,11 +7,9 @@ from scipy.stats import uniform, randint
 
 from .. import const
 
-def build_model(X_train, y_train, random_seed = 42):
+def build_model(X_train, y_train, input_features, random_seed = 42):
 
-    feature_columns = ['Pressure(hpa)', 'Temperature(°C)', 'Humidity(%)', 
-                       'Sunlight(Lux)', 'ElevationAngle', 'Azimuth']
-    X_train = X_train[feature_columns]
+    X_train = X_train[input_features]
     
     X_train_split, X_val_split, y_train_split, y_val_split = train_test_split(
         X_train, y_train, test_size=0.2, random_state=random_seed)
@@ -57,16 +55,20 @@ def build_model(X_train, y_train, random_seed = 42):
     
     return best_model
 
-
-def predict(model, X_test):
-
-    features = 'Pressure(hpa),Temperature(°C),Humidity(%),Sunlight(Lux),ElevationAngle,Azimuth'.split(',')
-
+def predict(model, features, X_test):
     copy_X_test = X_test[features].astype('float32')
-    
     # 預測
     predictions = model.predict(copy_X_test)
     return predictions
+
+def load_model(model_path):
+    xgboost_model = xgb.XGBRegressor()
+    xgboost_model.load_model(model_path)
+    return xgboost_model
+
+def save_model(model_path, xgboost_model):
+    xgboost_model.save_model(model_path)
+    return
 
 if __name__ == '__main__':
     pass

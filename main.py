@@ -12,9 +12,9 @@ def main():
     current_location = None
 
     regression_model = xgboost_model = rf_model = ensemble_model = None
-    input_features = 'Pressure(hpa),Temperature(°C),Humidity(%),Sunlight(Lux),ElevationAngle,Azimuth'.split(',')
+    input_features = 'Pressure(hpa),Temperature(°C),Humidity(%),Sunlight(Lux),ElevationAngle,Azimuth,Power(mW)_1'.split(',')
 
-    output_df = pd.read_csv(os.path.join(const.SUBMISSION_FOLDER, 'output.csv'))
+    output_df = pd.DataFrame(columns = const.ans_df_columns)
     for idx in tqdm(q_date_df.index):
         
         if current_location != q_date_df.loc[idx, 'location']:
@@ -31,70 +31,67 @@ def main():
             if xgboost_model is not None:       del xgboost_model
             if rf_model is not None:            del rf_model
             if ensemble_model is not None:      del ensemble_model
-            
-            regression_model = regression_nn.build_model(X_train, y_train, 
-                                                         input_features = input_features,
-                                                         epochs = 75)
-            xgboost_model  = xgboost.build_model(X_train, y_train)
+
+            model_path = os.path.join(const.PROJECT_FOLDER, 'models', 'regression', f'{current_location}.pth')
+            if os.path.exists(model_path):
+                regression_model = regression_nn.load_model(model_path)
+            else:
+                regression_model = regression_nn.build_model(X_train, y_train, input_features = input_features, epochs = 75)
+                regression_nn.save_model(model_path, regression_model)
+
+            model_path = os.path.join(const.PROJECT_FOLDER, 'models', 'xgboost', f'{current_location}.json')
+            if os.path.exists(model_path):
+                xgboost_model = xgboost.load_model(model_path)
+            else:
+                xgboost_model  = xgboost.build_model(X_train, y_train, input_features = input_features)
+                xgboost.save_model(model_path, xgboost_model)
+
             regression_prediction = regression_nn.predict(regression_model, X_train)
-            xgb_prediction = xgboost.predict(xgboost_model, X_train)
+            xgb_prediction = xgboost.predict(xgboost_model, input_features, X_train)
 
             for i in X_train.index:
                 X_train.loc[i, 'regression_prediction'] = regression_prediction[i].item()
                 X_train.loc[i, 'xgb_prediction'] = xgb_prediction[i].item()
             X_train.loc[:, 'Power'] = y_train
             
-            ensemble_model = ensemble_nn.build_model(X_train, y_train, epochs = 100,
-                                                     input_features = input_features + ['regression_prediction', 'xgb_prediction'])
-            
+            model_path = os.path.join(const.PROJECT_FOLDER, 'models', 'ensemble', f'{current_location}.pth')
+
+            if os.path.exists(model_path):
+                ensemble_model = ensemble_nn.load_model(model_path)
+            else:
+                ensemble_model = ensemble_nn.build_model(X_train, y_train, epochs = 100, input_features = input_features + ['regression_prediction', 'xgb_prediction'])
+                ensemble_nn.save_model(model_path, ensemble_model)
+
             ensemble_prediction = ensemble_nn.predict(ensemble_model, X_train)
             for i in X_train.index:
                 X_train.loc[i, 'ensemble_prediction'] = ensemble_prediction[i].item()
             X_train.to_csv(os.path.join(const.PROJECT_FOLDER, 'TEST', f'X_TRAIN_{current_location}.csv'), index = False)
             # rf_model  = random_forest.build_model(X_train, y_train)
 
-        recent_df = related_data.get_date_data(target_date = str(q_date_df.loc[idx, 'date']), location = q_date_df.loc[idx, 'location'], day_diff = 5, src = 'AVG')
-        input_df = related_data.merge_by_time(recent_df, date = str(q_date_df.loc[idx, 'date']))
-
-        # complement the empty day with average value
-        for time in range(9 * 60, 17 * 60, 10):
-            if time not in input_df:
-                input_df.loc[time, :] = input_df.mean()
-
-        input_df = input_df.reset_index(drop = False)
-        input_df = input_df.assign(
-            Hour = input_df.loc[:, 'Time'].astype(int) // 60,
-            Minute = np.mod(input_df.loc[:, 'Time'].astype(int), 60),
-        )
-        input_df.drop(columns = ['Time'], inplace = True)
-
-        X_test, _ = data_preprocess.preprocess(input_df, input_features = input_features)
-
-        for i in X_test.index:
-            serial = f"{q_date_df.loc[idx, 'date']}{int(X_test.loc[i, 'Hour']):02d}{int(X_test.loc[i, 'Minute']):02d}{int(q_date_df.loc[idx, 'location']):02d}"
-            if serial in features_df.index:
-                for col in features_df.columns:
-                    if pd.isna(features_df.loc[serial, col]) == True:  continue
-                    X_test.loc[i, col] = features_df.loc[serial, col]
-        X_test = X_test.astype('float32')
-        
-        regression_prediction = regression_nn.predict(regression_model, X_test)
-        xgb_prediction = xgboost.predict(xgboost_model, X_test)
-
-        for i in X_test.index:
-            X_test.loc[i, 'regression_prediction'] = regression_prediction[i].item()
-            X_test.loc[i, 'xgb_prediction'] = xgb_prediction[i].item()
-        ensemble_prediction = ensemble_nn.predict(ensemble_model, X_test)
-        for i in X_test.index:
-            X_test.loc[i, 'ensemble_prediction'] = ensemble_prediction[i].item()
-        X_test.to_csv(os.path.join(const.PROJECT_FOLDER, 'TEST', f'X_TEST_{idx}.csv'), index = False)
-
         date = str(q_date_df.loc[idx, 'date'])
+        input_df = pd.read_csv(os.path.join(const.SUBMISSION_FOLDER, 'input.csv'))
+        input_df = input_df[(input_df['Date'] == f"{date[:4]}-{date[4:6]}-{date[6:]}") & (input_df['location'].astype(int) == int(q_date_df.loc[idx, 'location']))]
+        X_test, _ = data_preprocess.preprocess(input_df, input_features = 'Pressure(hpa),Temperature(°C),Humidity(%),Sunlight(Lux),ElevationAngle,Azimuth'.split(','))
+        X_test = X_test.reset_index(drop = True).astype('float32')
+        X_test.loc[0, 'Power(mW)_1'] = float(q_date_df.loc[idx, 'Power(mW)_1'])
+        
         location =  int(q_date_df.loc[idx, 'location'])
         result_df = pd.DataFrame(columns = const.ans_df_columns)
         for i in X_test.index:
-            result_df.loc[i, :] = [f"{date}{int(X_test.loc[i, 'Hour']):02d}{int(X_test.loc[i, 'Minute']):02d}{location:02d}", f"{ensemble_prediction[i].item():.2f}"]
-        
+            regression_prediction = regression_nn.predict(regression_model, X_test.loc[[i], :])
+
+            xgb_prediction = xgboost.predict(xgboost_model, input_features, X_test.loc[[i], :])
+            X_test.loc[i, 'regression_prediction'] = regression_prediction.item()
+            X_test.loc[i, 'xgb_prediction'] = xgb_prediction[0]
+            ensemble_prediction = ensemble_nn.predict(ensemble_model, X_test.loc[[i], :])
+            X_test.loc[i, 'ensemble_prediction'] = ensemble_prediction.item()
+            try:
+                X_test.loc[i + 1, 'Power(mW)_1'] = ensemble_prediction.item()
+            except: pass
+            result_df.loc[i, :] = [f"{date}{int(X_test.loc[i, 'Hour']):02d}{int(X_test.loc[i, 'Minute']):02d}{location:02d}", f"{ensemble_prediction.item():.2f}"]
+
+        X_test.to_csv(os.path.join(const.PROJECT_FOLDER, 'TEST', f'X_TEST_{idx}.csv'), index = False)
+
         output_df = pd.concat([output_df, result_df], axis = 0, ignore_index = True) if output_df.shape[0] > 0 else result_df
         output_df.to_csv(os.path.join(const.SUBMISSION_FOLDER, 'output.csv'), index=False, encoding="utf-8-sig")
 
