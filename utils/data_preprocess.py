@@ -6,7 +6,6 @@ from sklearn.preprocessing import StandardScaler
 
 def data_transform(train_data):
     
-    '''
     train_data = train_data.assign(
         # Year = train_data['Serial'].astype(str).str[:4].astype(int),
         # Month = train_data['Serial'].astype(str).str[4:6].astype(int),
@@ -14,7 +13,6 @@ def data_transform(train_data):
         Hour = train_data['Serial'].astype(str).str[8:10].astype(int),
         Minute = train_data['Serial'].astype(str).str[10:12].astype(int),
     )
-    '''
     
     # train_data.loc[:, 'Time'] = train_data.apply(lambda row: int(str(row['Serial'])[8:10])*60 + int(str(row['Serial'])[10:12]), axis=1)
     
@@ -31,7 +29,6 @@ def preprocess(train_data, input_features, standardization = False):
         y_train = y_train.astype('float32')
         train_data.drop(columns = ['Power(mW)'], inplace = True)
         X_train = train_data[input_features]
-        
         for i in X_train[X_train.isna().any(axis=1)].index:
             for col in X_train.columns:
                 if pd.isna(X_train.loc[i, col]):

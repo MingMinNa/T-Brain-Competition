@@ -51,7 +51,7 @@ def build_model(X_train, y_train, input_features, random_seed = 42):
     
     val_predictions = best_model.predict(X_val_split)
     val_mae = mean_absolute_error(y_val_split, val_predictions)
-    print(f"[best rf model] Validation MAE: {val_mae:.4f}")
+    print(f"[best xgb model] Validation MAE: {val_mae:.4f}")
     
     return best_model
 
