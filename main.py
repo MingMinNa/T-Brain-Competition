@@ -32,14 +32,14 @@ def main():
             if rf_model is not None:            del rf_model
             if ensemble_model is not None:      del ensemble_model
 
-            model_path = os.path.join(const.PROJECT_FOLDER, 'models', 'regression', f'{current_location}.pth')
+            model_path = os.path.join(const.PROJECT_FOLDER, 'save_models', 'regression', f'{current_location}.pth')
             if os.path.exists(model_path):
                 regression_model = regression_nn.load_model(model_path)
             else:
                 regression_model = regression_nn.build_model(X_train, y_train, input_features = input_features, epochs = 75)
                 regression_nn.save_model(model_path, regression_model)
 
-            model_path = os.path.join(const.PROJECT_FOLDER, 'models', 'xgboost', f'{current_location}.json')
+            model_path = os.path.join(const.PROJECT_FOLDER, 'save_models', 'xgboost', f'{current_location}.json')
             if os.path.exists(model_path):
                 xgboost_model = xgboost.load_model(model_path)
             else:
@@ -54,7 +54,7 @@ def main():
                 X_train.loc[i, 'xgb_prediction'] = xgb_prediction[i].item()
             X_train.loc[:, 'Power'] = y_train
             
-            model_path = os.path.join(const.PROJECT_FOLDER, 'models', 'ensemble', f'{current_location}.pth')
+            model_path = os.path.join(const.PROJECT_FOLDER, 'save_models', 'ensemble', f'{current_location}.pth')
 
             if os.path.exists(model_path):
                 ensemble_model = ensemble_nn.load_model(model_path)
@@ -71,7 +71,7 @@ def main():
         input_df = input_df[(input_df['Date'] == f"{date[:4]}-{date[4:6]}-{date[6:]}") & (input_df['location'].astype(int) == int(q_date_df.loc[idx, 'location']))]
         X_test, _ = data_preprocess.preprocess(input_df, input_features = input_features)
         X_test = X_test.reset_index(drop = True).astype('float32')
-                                                        
+
         regression_prediction = regression_nn.predict(regression_model, X_test)
         xgb_prediction = xgboost.predict(xgboost_model, input_features, X_test)
 
