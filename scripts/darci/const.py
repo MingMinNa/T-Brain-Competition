@@ -14,7 +14,7 @@ MODELS_FOLDER = os.path.join(PROJECT_FOLDER, 'save_models', 'darci')
 
 
 def build_model_folder():
+    if not os.path.exists(os.path.dirname(MODELS_FOLDER)):
+        os.mkdir(os.path.dirname(MODELS_FOLDER))
     if not os.path.exists(MODELS_FOLDER):
         os.mkdir(MODELS_FOLDER)
-    if not os.path.exists(os.path.join(MODELS_FOLDER, 'darci')):
-        os.mkdir(os.path.join(MODELS_FOLDER, 'darci'))
