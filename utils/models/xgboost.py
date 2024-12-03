@@ -19,8 +19,8 @@ def build_model(X_train, y_train, input_features, random_seed = 42):
         'learning_rate': uniform(0.01, 0.3),  # 取值範圍 0.01 到 0.31
         'max_depth': randint(3, 10),          # 隨機整數，範圍 3 到 9
         'n_estimators': randint(100, 501),    # 隨機整數，範圍 100 到 500
-        'subsample': uniform(0.6, 0.4),       # 取值範圍 0.6 到 1.0
-        'colsample_bytree': uniform(0.6, 0.4),# 取值範圍 0.6 到 1.0
+        'subsample': uniform(0.6, 1.0),       # 取值範圍 0.6 到 1.0
+        'colsample_bytree': uniform(0.6, 1.0),# 取值範圍 0.6 到 1.0
         'reg_alpha': uniform(0, 1),           # 取值範圍 0 到 1
         'reg_lambda': uniform(1, 2),          # 取值範圍 1 到 3
     }
