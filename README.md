@@ -1,34 +1,55 @@
-# T-Brain Competition
-### [根據區域微氣候資料預測發電量競賽](https://tbrain.trendmicro.com.tw/Competitions/Details/36)
-### 競賽說明
-<img src="/img/description.png" alt="description" width="600">
+# T-Brain Competition <br>根據區域微氣候資料預測發電量競賽
 
-### 評分標準
-<img src="/img/evaluation_criteria.png" alt="evaluation_criteria" width="600">
+## 競賽說明
+太陽能光電裝置的發電量與微氣候息息相關，除了太陽輻射之外，溫度與濕度會影響太陽能光電裝置光電效應的進行，而風力又會影響溫度與濕度，另外還需考慮落塵量和雨量的影響。由於花蓮幅員遼闊，擁有各種複雜的地形地貌，本計畫將在各種地形架設各種感測器與太陽能光電裝置，建立不同地區的微氣候資料集與收集太陽能光電裝置的發電量，做為本次比賽之資料使用。本競賽提供 2024 年間，在 17 個地點收集的區域微氣候資料與光電發電量作為訓練資料，比賽內容為預測指定之時間與地點的發電瓦數，並且以誤差值為排名依據。
 
-### 評分方式
-<img src="/img/evaluation_method.png" alt="evaluation_method" width="600">
+## 評分標準
+1. 提交檔案請使用 .csv 檔，內容格式需符合比賽格式規定。  
+   上傳檔案內容請使用 UTF-8(無BOM檔首) 編碼，並使用 Unix 系統換行字符。  
+   請勿使用其他 Non-Printable Characters，以避免評分失敗的可能。
+3. Leaderboard 系統會對每次的提交結果進行評測，以最高分那一次呈現於 Leaderboard。  
+   若出現參賽隊伍同分情形，以上傳繳交時間判斷排名順序。
+5. 比賽過程中，參賽隊伍可至 Leaderboard 與 Submission History 確認各次上傳之評測分數做為參考。  
+   Submission History 內將提供每次評測的分數。
+7. 比賽期間所有 Private 評測分數不公布，比賽結束後將另外公佈 Private Leaderboard 的結果，並以此成績及規定繳交之報告為排名依據。
+8. Private Leaderboard 總排名係指已有繳交答案且完成賽事取得 Private Leaderboard 分數的隊伍，方列入排名。  
+   未依規定期限繳交答案之隊伍/繳交答案失敗未修正之隊伍視同棄賽，不列入總排名。
+10. 競賽測試集 Dataset 將於 11/18 (一) 上午11:00 開放下載，同時可開始上傳答案。
+11. 11/18 (一) 上午 11:00 至 11/28 (四) 晚上 23:59:59 之間，可上傳競賽測試集 Dataset 預測結果，逾時則不予評分。  
+    此期間每日上傳次數上限為 5 次，須注意每日上傳次數以檔案計算。
 
-### 競賽規則
-<img src="/img/rule.png" alt="rule" width="600">
 
-### 時程表
+## 評分方式
+將每一筆預測資料與正確資料相比並計算誤差(取絕對值)，並將所有誤差加總在一起，以加總誤差值為排名依據，加總誤差越少排名越高。  
+計分公式如下：
+假設總共有 $n$ 筆預測資料，每筆資料的正確答案為 $S_i$，參賽者的答案為 $A_i$ (其中 $i=1,2,…,n$)。
+
+$$
+\text{總分數} = \sum_{i = 1}^{n} | A_i - S_i|.
+$$
+
+總分數越低者則排名越高。
+
+## 時程表
 <img src="/img/schedule.png" alt="schedule" width="600">
 
 ---
+## 競賽結果
 
-### 結果
-參賽隊伍 **934** 名。
-* 最終上傳分數  
-  <img src="/img/final_upload.png" alt="final_upload" width="500">
+### 參賽隊伍
+<img src="/img/teams.png" alt="#_team" width="300">
 
-* 公開排行榜：  
-  <img src="/img/public.png" alt="public" width="500">
+### 最終上傳分數  
+<img src="/img/final_upload.png" alt="final_upload" width="500">
 
-* 私人排行榜：  
-  <img src="/img/private.png" alt="private" width="500">
+### 公開排行榜 & 私人排行榜  
+| 排行榜 | 排名 | 隊伍編號 | 隊伍人數 | 上傳次數 | 誤差值 |
+|:---: |:---:|:----:|:---:|:----:|:---:|
+|**Public**|**104**|TEAM_6982|3|30|$1160895.4$|
+|**Private**|**91**|TEAM_6982|3|30|$1170488.$|
 
-註：排行榜上數字依序為 **排名**、**隊伍**、**隊伍人數**、**上傳次數**、**誤差值**、**上傳日期**
+<img src="/img/public.png" alt="public" width="500">
+<img src="/img/private.png" alt="private" width="500">
 
-### 其他
-* Python version : ```3.12```
+## 相關連結
+[根據區域微氣候資料預測發電量競賽 — 首頁](https://tbrain.trendmicro.com.tw/Competitions/Details/36)
