@@ -73,9 +73,7 @@ tensorflow==2.18.0
 tensorflow_intel==2.18.0
 termcolor==2.5.0
 threadpoolctl==3.5.0
-torch==2.5.1+cu124
-torchaudio==2.5.1+cu124
-torchvision==0.20.1+cu124
+torch==2.5.1
 tornado==6.4.1
 tqdm==4.67.0
 traitlets==5.14.3
