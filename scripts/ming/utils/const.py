@@ -11,6 +11,7 @@ def __get_parent_folder(file_path, level = 1):
 PROJECT_FOLDER = __get_parent_folder(os.path.abspath(__file__), 4)
 TRAINING_FOLDER = os.path.join(PROJECT_FOLDER, 'Training_Data', 'ming')
 SUBMISSION_FOLDER = os.path.join(PROJECT_FOLDER, 'submission', 'ming')
+MODELS_FOLDER = os.path.join(PROJECT_FOLDER, 'save_models', 'ming')
 
 # Generate_folder
 GENERATE_FOLDER = os.path.join(TRAINING_FOLDER, 'Generate')

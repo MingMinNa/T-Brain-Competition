@@ -34,7 +34,7 @@ def main():
 
 
             # Load or build the regression model
-            model_path = os.path.join(const.PROJECT_FOLDER, 'save_models', 'regression', f'{current_location}.pth')
+            model_path = os.path.join(const.MODELS_FOLDER, 'regression', f'{current_location}.pth')
             if os.path.exists(model_path):
                 regression_model = regression_nn.load_model(model_path)
             else:
@@ -42,7 +42,7 @@ def main():
                 regression_nn.save_model(model_path, regression_model)
 
             # Load or build the XGBoost model
-            model_path = os.path.join(const.PROJECT_FOLDER, 'save_models', 'xgboost', f'{current_location}.json')
+            model_path = os.path.join(const.MODELS_FOLDER, 'xgboost', f'{current_location}.json')
             if os.path.exists(model_path):
                 xgboost_model = xgboost.load_model(model_path)
             else:
@@ -58,7 +58,7 @@ def main():
                 X_train.loc[i, 'xgb_prediction'] = xgb_prediction[i].item()
             
             # Load or build the ensemble model
-            model_path = os.path.join(const.PROJECT_FOLDER, 'save_models', 'ensemble', f'{current_location}.pth')
+            model_path = os.path.join(const.MODELS_FOLDER, 'ensemble', f'{current_location}.pth')
             if os.path.exists(model_path):
                 ensemble_model = ensemble_nn.load_model(model_path)
             else:
@@ -109,11 +109,11 @@ if __name__ == '__main__':
     # create save_models folder to save the built model
     if not os.path.exists(os.path.join(const.PROJECT_FOLDER, 'save_models')):
         os.mkdir(os.path.join(const.PROJECT_FOLDER, 'save_models'))
-    if not os.path.exists(os.path.join(const.PROJECT_FOLDER, 'save_models', 'ming')):
-        os.mkdir(os.path.join(const.PROJECT_FOLDER, 'save_models', 'ming'))
+    if not os.path.exists(os.path.join(const.MODELS_FOLDER)):
+        os.mkdir(os.path.join(const.MODELS_FOLDER))
 
     for model_name in ['regression', 'ensemble', 'xgboost']:
-        if not os.path.exists(os.path.join(const.PROJECT_FOLDER, 'save_models', 'ming', model_name)):
-            os.mkdir(os.path.join(const.PROJECT_FOLDER, 'save_models', 'ming', model_name))
+        if not os.path.exists(os.path.join(const.MODELS_FOLDER, model_name)):
+            os.mkdir(os.path.join(const.MODELS_FOLDER, model_name))
     
     main()
